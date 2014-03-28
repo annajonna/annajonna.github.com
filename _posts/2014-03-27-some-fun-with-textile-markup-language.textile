@@ -1,0 +1,24 @@
+---
+layout: post
+title: "Some fun with Textile markup language"
+description: ""
+category: lessons
+tags: [beginner]
+---
+{% include JB/setup %}
+
+h3. Some fun with Textile markup language
+
+Just changed my Rakefile (Why does that rhyme with Makefile), according to "this site":http://octopress.org/docs/configuring/, so that posts would by default be created with @.textile@ suffix. 
+
+Changed this: 
+@'post_ext' => "md",@
+to this: 
+@'post_ext' => "textile",@
+
+It worked beautifully, so I wrote this post about it. When I tried to render it, Ruby complained:  %{color:red}Missing dependency: RedCloth% 
+
+Did @gem install RedCloth@ as "given here":http://redcloth.org/
+
+Now it just works. 
+

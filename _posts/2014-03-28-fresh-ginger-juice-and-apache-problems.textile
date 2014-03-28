@@ -1,0 +1,12 @@
+---
+layout: post
+title: "Fresh ginger juice and Apache problems"
+description: ""
+category: "web"
+tags: [apache, juice]
+---
+{% include JB/setup %}
+Got some problems with Apache and php-fpm cgi module, cause the load is going skywards. My attention is constantly caught by a bottle of fresh organic ginger juice, mixed with rests of fresh organic tumeric juice that my friend gave me. This is some strong stuff. 
+
+However I am not going to use strong medicine to solve the Apache problem. Just going to move those webs to the cluster. Then I will use the script @vhosts-create.sh@ script found on my "github here":https://github.com/annajonna/wordpress-vhost-create/blob/master/bin/vhost-create.sh .
+

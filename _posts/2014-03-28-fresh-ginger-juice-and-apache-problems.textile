@@ -10,3 +10,6 @@ Got some problems with Apache and php-fpm cgi module, cause the load is going sk
 
 However I am not going to use strong medicine to solve the Apache problem. Just going to move those webs to the cluster. Then I will use the script @vhosts-create.sh@ script found on my "github here":https://github.com/annajonna/wordpress-vhost-create/blob/master/bin/vhost-create.sh .
 
+By the way: This post was created with this command: 
+@rake post title="Fresh ginger juice and Apache problems" category="web" tags=["apache, juice"]@
+Im growing a strange kind of affection towards this Jekyll and JB(Jekyll Bootstrap) . 

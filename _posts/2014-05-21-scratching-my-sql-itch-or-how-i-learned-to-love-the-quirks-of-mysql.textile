@@ -1,0 +1,231 @@
+---
+layout: post
+title: "Scratching My SQL itch, or how I learned to love the quirks of MySQL"
+description: ""
+category: "devops"
+tags: [puppet, mysql]
+---
+{% include JB/setup %}
+
+h1. Puppet can be a bit quirky. 
+Couple it with the quirks of MySQL and we have ourselfes an endless supply of exciting problems to solve. My problem was an endless growth of a MySQL table in the Puppet dashboard database. This table is stored in an InnoDB engine. The file storing this table had grown to 17 GB and was threatening to stop the operation of Puppet sooner or later. Some other people have had "similar problems":https://bugzilla.mozilla.org/show_bug.cgi?id=897231, but for different reasons. 
+To grasp the size of the problem, have a look at the problem here: 
+ <pre>
+<code>
+mysql> SELECT (data_length+index_length)/power(1024,2) tablesize_mb FROM information_schema.tables WHERE table_schema='dashboard';
++--------------+
+| tablesize_mb |
++--------------+
+|     0.015625 |
+|      0.03125 |
+|   556.578125 |
+|     0.015625 |
+|     0.015625 |
+|     0.015625 |
+|     0.015625 |
+|     0.015625 |
+|     0.015625 |
+|      0.03125 |
+|     0.015625 |
+|     0.015625 |
+|      156.375 |
+|       88.375 |
+|    27.515625 |
+| 15650.235693 |
+|     0.015625 |
+|      37.5625 |
++--------------+
+18 rows in set (0.86 sec)
+
+</code>
+</pre>
+This clearly shows the enormous size, and hence the problem of one of the tables. Deleting data from tables, is however not something to be taken lightly, it should be done wit care. So follows an analysis of the connections of the database. It is clear that the table in question is named @resource_statuses@ so I took a look at it:
+ <pre>
+<code>
+mysql> show create table dashboard.resource_statuses\G
+*************************** 1. row ***************************
+       Table: resource_statuses
+Create Table: CREATE TABLE `resource_statuses` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `report_id` int(11) NOT NULL,
+  `resource_type` varchar(255) DEFAULT NULL,
+  `title` text,
+  `evaluation_time` decimal(12,6) DEFAULT NULL,
+  `file` text,
+  `line` int(11) DEFAULT NULL,
+  `tags` text,
+  `time` datetime DEFAULT NULL,
+  `change_count` int(11) DEFAULT NULL,
+  `out_of_sync_count` int(11) DEFAULT NULL,
+  `skipped` tinyint(1) DEFAULT NULL,
+  `failed` tinyint(1) DEFAULT NULL,
+  `status` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `index_resource_statuses_on_report_id` (`report_id`),
+  CONSTRAINT `fk_resource_statuses_report_id` FOREIGN KEY (`report_id`) REFERENCES `reports` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=52996727 DEFAULT CHARSET=utf8
+1 row in set (0.02 sec)
+</code>
+</pre>
+The table has a foreign key constraint connection to a table named reports. Taking a look at that:
+ <pre>
+<code>
+mysql> show create table dashboard.reports\G
+*************************** 1. row ***************************
+       Table: reports
+Create Table: CREATE TABLE `reports` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `node_id` int(11) DEFAULT NULL,
+  `host` varchar(255) DEFAULT NULL,
+  `time` datetime DEFAULT NULL,
+  `status` varchar(255) DEFAULT NULL,
+  `kind` varchar(255) DEFAULT NULL,
+  `puppet_version` varchar(255) DEFAULT NULL,
+  `configuration_version` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `index_reports_on_node_id` (`node_id`),
+  KEY `index_reports_on_time_and_node_id_and_status` (`time`,`node_id`,`status`),
+  CONSTRAINT `fk_reports_node_id` FOREIGN KEY (`node_id`) REFERENCES `nodes` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=626677 DEFAULT CHARSET=utf8
+1 row in set (0.00 sec)
+</code>
+</pre>
+This table has a foreign key constraint connection to a table named nodes. Taking a look at that:
+ <pre>
+<code>
+mysql> show create table dashboard.nodes\G
+*************************** 1. row ***************************
+       Table: nodes
+Create Table: CREATE TABLE `nodes` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) DEFAULT NULL,
+  `description` text,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `reported_at` datetime DEFAULT NULL,
+  `last_apply_report_id` int(11) DEFAULT NULL,
+  `status` varchar(255) DEFAULT NULL,
+  `hidden` tinyint(1) DEFAULT '0',
+  `last_inspect_report_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uc_node_name` (`name`)
+) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8
+1 row in set (0.00 sec)
+</code>
+</pre>
+This table does not have constrains, so this seems to be one end of the chain. Further rummaging in the database tables reveals the other end of the chain. That is a table named @resource_events@.
+ <pre>
+<code>
+mysql> show create table dashboard.resource_events\G
+*************************** 1. row ***************************
+       Table: resource_events
+Create Table: CREATE TABLE `resource_events` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `resource_status_id` int(11) NOT NULL,
+  `previous_value` text,
+  `desired_value` text,
+  `message` text,
+  `name` varchar(255) DEFAULT NULL,
+  `property` varchar(255) DEFAULT NULL,
+  `status` varchar(255) DEFAULT NULL,
+  `time` datetime DEFAULT NULL,
+  `historical_value` text,
+  `audited` tinyint(1) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `index_resource_events_on_resource_status_id` (`resource_status_id`),
+  CONSTRAINT `fk_resource_events_resource_status_id` FOREIGN KEY (`resource_status_id`) REFERENCES `resource_statuses` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=116322 DEFAULT CHARSET=utf8
+1 row in set (0.00 sec)
+</code>
+</pre>
+So it seems I have myself a chain of tables connected by one to many relations. 
+ <pre>
+<code>
+@nodes@ <- @reports@ <- @resource_statuses@ <- @resource_events@ .
+</code>
+</pre>
+If an entry is deleted from @nodes@ the database would remove all enries related by the constrains. Now the content of the @nodes@ table is simply each host monitored by Puppet. Each host has many reports associated with it. Analysing the @reports@ table revealed entries that were way too old to be of any interest. The tables were set up on a development database, and some experiments did show that all related entries were removed from the @resource_statuses@ and @resource_events@ tables when an entry was removed from @reports@. So the solution was to remove entries from @reports@ and let the database management take care of the deletions of the related entries according to the constraints. What remained was to determine what entries to delete. 
+I decided to remove entries based on their age: the oldest would go out first. Thus I needed to find the oldest entry: 
+ <pre>
+<code>
+mysql> select min(time) from reports;
++---------------------+
+| min(time)           |
++---------------------+
+| 2013-03-15 00:01:47 |
++---------------------+
+1 row in set (0.00 sec)
+</code>
+</pre>
+Now I decided to remove 2 months worth of reports and all related entries which results in an error: 
+ <pre>
+<code>
+mysql> delete from reports where time<'2013-5-15';
+ERROR 1206 (HY000): The total number of locks exceeds the lock table size
+</code>
+</pre>
+Here we have the real culprit: Me. Not configuring MySQL with enough resources. So I tested deleting smaller sections like half a month, and that went well. By default MySQL has about 8MB allocated to @innodb_buffer_pool_size@ . The solution was to add this line in the @[mysqld]@ section in the file @/etc/my.cnf@ :
+ <pre>
+<code>
+innodb_buffer_pool_size=256M
+</code>
+</pre>
+Then restart MySQL: 
+ <pre>
+<code>
+# service mysqld restart
+Stopping mysqld:                                           [  OK  ]
+Starting mysqld:                                           [  OK  ]
+</code>
+</pre>
+Now trying to delete a few months of reports:
+ <pre>
+<code>
+mysql> delete from reports where time<'2013-5-15';
+ERROR 2006 (HY000): MySQL server has gone away
+No connection. Trying to reconnect...
+Connection id:    5
+Current database: dashboard
+
+Query OK, 59557 rows affected (3 min 17.58 sec)
+</code>
+</pre>
+Now trying to delete half a years worth of data to find out if I allocated enough of memory to the @innodb_buffer_pool_size@. 
+ <pre>
+<code>
+mysql> delete from reports where time<'2013-12-31';
+Query OK, 207384 rows affected (13 min 25.02 sec)
+</code>
+</pre>
+That went down pretty cool, so I consider this problem fixed. Now to look at the size of the tables: 
+ <pre>
+<code>
+mysql> SELECT table_name,(data_length+index_length)/power(1024,2) tablesize_mb FROM information_schema.tables WHERE table_schema='dashboard';
++------------------------------+--------------+
+| table_name                   | tablesize_mb |
++------------------------------+--------------+
+| delayed_job_failures         |     0.015625 |
+| delayed_jobs                 |      0.03125 |
+| metrics                      |   159.203125 |
+| node_class_memberships       |     0.015625 |
+| node_classes                 |     0.015625 |
+| node_group_class_memberships |     0.015625 |
+| node_group_edges             |     0.015625 |
+| node_group_memberships       |     0.015625 |
+| node_groups                  |     0.015625 |
+| nodes                        |      0.03125 |
+| old_reports                  |     0.015625 |
+| parameters                   |     0.015625 |
+| report_logs                  |      25.0625 |
+| reports                      |    25.046875 |
+| resource_events              |      4.03125 |
+| resource_statuses            |   3322.03125 |
+| schema_migrations            |     0.015625 |
+| timeline_events              |      37.5625 |
++------------------------------+--------------+
+18 rows in set (0.58 sec)
+</code>
+</pre>
+
+So this is fixed, and now I am off to a Cryptoparty held by the Pirate Party. ;) 
+

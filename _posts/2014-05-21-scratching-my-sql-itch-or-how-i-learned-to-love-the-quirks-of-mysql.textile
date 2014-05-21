@@ -37,7 +37,6 @@ mysql> SELECT (data_length+index_length)/power(1024,2) tablesize_mb FROM informa
 |      37.5625 |
 +--------------+
 18 rows in set (0.86 sec)
-
 </code>
 </pre>
 This clearly shows the enormous size, and hence the problem of one of the tables. Deleting data from tables, is however not something to be taken lightly, it should be done wit care. So follows an analysis of the connections of the database. It is clear that the table in question is named @resource_statuses@ so I took a look at it:
@@ -68,7 +67,7 @@ mysql> show create table dashboard.resource_statuses\G
 </code>
 </pre>
 </notextile>
-The table has a foreign key constraint connection to a table named reports. Taking a look at that:
+The table has a foreign key constraint connection to a table named @reports@. Taking a look at that:
 <notextile>
  <pre>
 <code>
@@ -91,7 +90,7 @@ mysql> show create table dashboard.reports\G
 </code>
 </pre>
 </notextile>
-This table has a foreign key constraint connection to a table named nodes. Taking a look at that:
+This table has a foreign key constraint connection to a table named @nodes@. Taking a look at that:
 <notextile>
  <pre>
 <code>
@@ -116,7 +115,7 @@ mysql> show create table dashboard.nodes\G
 </notextile>
 This table does not have constrains, so this seems to be one end of the chain. Further rummaging in the database tables reveals the other end of the chain. That is a table named @resource_events@.
 <notextile>
- <pre>
+<pre>
 <code>
 mysql> show create table dashboard.resource_events\G
  CREATE TABLE `resource_events` (
@@ -139,6 +138,7 @@ mysql> show create table dashboard.resource_events\G
 </code>
 </pre>
 </notextile>
+
 So it seems I have myself a chain of tables connected by one to many relations. 
 
 @nodes@ <- @reports@ <- @resource_statuses@ <- @resource_events@ .
@@ -164,23 +164,21 @@ ERROR 1206 (HY000): The total number of locks exceeds the lock table size
 </code>
 </pre>
 Here we have the real culprit: Me. Not configuring MySQL with enough resources. So I tested deleting smaller sections like half a month, and that went well. By default MySQL has about 8MB allocated to @innodb_buffer_pool_size@ . The solution was to add this line in the @[mysqld]@ section in the file @/etc/my.cnf@ :
- <pre>
-<code>
-innodb_buffer_pool_size=256M
-</code>
-</pre>
+
+@innodb_buffer_pool_size=256M@
+
 Then restart MySQL: 
 <notextile>
- <pre>
+<pre>
 <code>
- # service mysqld restart
+  service mysqld restart
  Stopping mysqld:                                           [  OK  ]
  Starting mysqld:                                           [  OK  ]
 </code>
 </pre>
 </notextile>
 Now trying to delete a few months of reports:
- <pre>
+<pre>
 <code>
 mysql> delete from reports where time<'2013-5-15';
 ERROR 2006 (HY000): MySQL server has gone away
@@ -192,14 +190,14 @@ Query OK, 59557 rows affected (3 min 17.58 sec)
 </code>
 </pre>
 Now trying to delete half a years worth of data to find out if I allocated enough of memory to the @innodb_buffer_pool_size@. 
- <pre>
+<pre>
 <code>
 mysql> delete from reports where time<'2013-12-31';
 Query OK, 207384 rows affected (13 min 25.02 sec)
 </code>
 </pre>
 That went down pretty cool, so I consider this problem fixed. Now to look at the size of the tables: 
- <pre>
+<pre>
 <code>
 mysql> SELECT table_name,(data_length+index_length)/power(1024,2) tablesize_mb FROM information_schema.tables WHERE table_schema='dashboard';
 +------------------------------+--------------+

@@ -43,6 +43,7 @@ mysql> SELECT (data_length+index_length)/power(1024,2) tablesize_mb FROM informa
 This clearly shows the enormous size, and hence the problem of one of the tables. Deleting data from tables, is however not something to be taken lightly, it should be done wit care. So follows an analysis of the connections of the database. It is clear that the table in question is named @resource_statuses@ so I took a look at it:
  <pre>
 <code>
+<notextile>
 mysql> show create table dashboard.resource_statuses\G
 *************************** 1. row ***************************
        Table: resource_statuses
@@ -66,11 +67,13 @@ Create Table: CREATE TABLE `resource_statuses` (
   CONSTRAINT `fk_resource_statuses_report_id` FOREIGN KEY (`report_id`) REFERENCES `reports` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=52996727 DEFAULT CHARSET=utf8
 1 row in set (0.02 sec)
+</notextile>
 </code>
 </pre>
 The table has a foreign key constraint connection to a table named reports. Taking a look at that:
  <pre>
 <code>
+<notextile>
 mysql> show create table dashboard.reports\G
 *************************** 1. row ***************************
        Table: reports
@@ -89,11 +92,13 @@ Create Table: CREATE TABLE `reports` (
   CONSTRAINT `fk_reports_node_id` FOREIGN KEY (`node_id`) REFERENCES `nodes` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=626677 DEFAULT CHARSET=utf8
 1 row in set (0.00 sec)
+</notextile>
 </code>
 </pre>
 This table has a foreign key constraint connection to a table named nodes. Taking a look at that:
  <pre>
 <code>
+<notextile>
 mysql> show create table dashboard.nodes\G
 *************************** 1. row ***************************
        Table: nodes
@@ -112,11 +117,13 @@ Create Table: CREATE TABLE `nodes` (
   UNIQUE KEY `uc_node_name` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8
 1 row in set (0.00 sec)
+</notextile>
 </code>
 </pre>
 This table does not have constrains, so this seems to be one end of the chain. Further rummaging in the database tables reveals the other end of the chain. That is a table named @resource_events@.
  <pre>
 <code>
+<notextile>
 mysql> show create table dashboard.resource_events\G
 *************************** 1. row ***************************
        Table: resource_events
@@ -137,14 +144,13 @@ Create Table: CREATE TABLE `resource_events` (
   CONSTRAINT `fk_resource_events_resource_status_id` FOREIGN KEY (`resource_status_id`) REFERENCES `resource_statuses` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=116322 DEFAULT CHARSET=utf8
 1 row in set (0.00 sec)
+</notextile>
 </code>
 </pre>
 So it seems I have myself a chain of tables connected by one to many relations. 
- <pre>
-<code>
+
 @nodes@ <- @reports@ <- @resource_statuses@ <- @resource_events@ .
-</code>
-</pre>
+
 If an entry is deleted from @nodes@ the database would remove all enries related by the constrains. Now the content of the @nodes@ table is simply each host monitored by Puppet. Each host has many reports associated with it. Analysing the @reports@ table revealed entries that were way too old to be of any interest. The tables were set up on a development database, and some experiments did show that all related entries were removed from the @resource_statuses@ and @resource_events@ tables when an entry was removed from @reports@. So the solution was to remove entries from @reports@ and let the database management take care of the deletions of the related entries according to the constraints. What remained was to determine what entries to delete. 
 I decided to remove entries based on their age: the oldest would go out first. Thus I needed to find the oldest entry: 
  <pre>
@@ -174,9 +180,9 @@ innodb_buffer_pool_size=256M
 Then restart MySQL: 
  <pre>
 <code>
-# service mysqld restart
-Stopping mysqld:                                           [  OK  ]
-Starting mysqld:                                           [  OK  ]
+ # service mysqld restart
+ Stopping mysqld:                                           [  OK  ]
+ Starting mysqld:                                           [  OK  ]
 </code>
 </pre>
 Now trying to delete a few months of reports:

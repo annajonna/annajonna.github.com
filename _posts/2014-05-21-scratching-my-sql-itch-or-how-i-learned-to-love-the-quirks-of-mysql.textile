@@ -7,7 +7,8 @@ tags: [puppet, mysql]
 ---
 {% include JB/setup %}
 
-h1. Puppet can be a bit quirky. 
+h1. Puppet can be a bit quirky
+
 Couple it with the quirks of MySQL and we have ourselfes an endless supply of exciting problems to solve. My problem was an endless growth of a MySQL table in the Puppet dashboard database. This table is stored in an InnoDB engine. The file storing this table had grown to 17 GB and was threatening to stop the operation of Puppet sooner or later. Some other people have had "similar problems":https://bugzilla.mozilla.org/show_bug.cgi?id=897231, but for different reasons. 
 To grasp the size of the problem, have a look at the problem here: 
  <pre>

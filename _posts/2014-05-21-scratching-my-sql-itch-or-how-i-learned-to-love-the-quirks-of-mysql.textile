@@ -172,8 +172,8 @@ Then restart MySQL:
 <pre>
 <code>
   service mysqld restart
- Stopping mysqld:                                           [  OK  ]
- Starting mysqld:                                           [  OK  ]
+ Stopping mysqld:                             [  OK  ]
+ Starting mysqld:                             [  OK  ]
 </code>
 </pre>
 </notextile>

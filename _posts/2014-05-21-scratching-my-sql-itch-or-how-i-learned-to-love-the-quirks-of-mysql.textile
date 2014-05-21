@@ -178,6 +178,7 @@ Then restart MySQL:
 </pre>
 </notextile>
 Now trying to delete a few months of reports:
+<notextile>
 <pre>
 <code>
 mysql> delete from reports where time<'2013-5-15';
@@ -189,6 +190,7 @@ Current database: dashboard
 Query OK, 59557 rows affected (3 min 17.58 sec)
 </code>
 </pre>
+</notextile>
 Now trying to delete half a years worth of data to find out if I allocated enough of memory to the @innodb_buffer_pool_size@. 
 <pre>
 <code>

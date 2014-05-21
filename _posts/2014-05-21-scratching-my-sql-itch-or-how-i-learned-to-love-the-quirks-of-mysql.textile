@@ -41,9 +41,9 @@ mysql> SELECT (data_length+index_length)/power(1024,2) tablesize_mb FROM informa
 </code>
 </pre>
 This clearly shows the enormous size, and hence the problem of one of the tables. Deleting data from tables, is however not something to be taken lightly, it should be done wit care. So follows an analysis of the connections of the database. It is clear that the table in question is named @resource_statuses@ so I took a look at it:
+<notextile>
  <pre>
 <code>
-<notextile>
 mysql> show create table dashboard.resource_statuses\G
  CREATE TABLE `resource_statuses` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -65,13 +65,13 @@ mysql> show create table dashboard.resource_statuses\G
   CONSTRAINT `fk_resource_statuses_report_id` FOREIGN KEY (`report_id`) REFERENCES `reports` (`id`) ON DELETE CASCADE
  ) ENGINE=InnoDB AUTO_INCREMENT=52996727 DEFAULT CHARSET=utf8
  1 row in set (0.02 sec)
-</notextile>
 </code>
 </pre>
+</notextile>
 The table has a foreign key constraint connection to a table named reports. Taking a look at that:
+<notextile>
  <pre>
 <code>
-<notextile>
 mysql> show create table dashboard.reports\G
  CREATE TABLE `reports` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -88,13 +88,13 @@ mysql> show create table dashboard.reports\G
   CONSTRAINT `fk_reports_node_id` FOREIGN KEY (`node_id`) REFERENCES `nodes` (`id`) ON DELETE CASCADE
  ) ENGINE=InnoDB AUTO_INCREMENT=626677 DEFAULT CHARSET=utf8
  1 row in set (0.00 sec)
-</notextile>
 </code>
 </pre>
+</notextile>
 This table has a foreign key constraint connection to a table named nodes. Taking a look at that:
+<notextile>
  <pre>
 <code>
-<notextile>
 mysql> show create table dashboard.nodes\G
  CREATE TABLE `nodes` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -111,13 +111,13 @@ mysql> show create table dashboard.nodes\G
   UNIQUE KEY `uc_node_name` (`name`)
  ) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8
  1 row in set (0.00 sec)
-</notextile>
 </code>
 </pre>
+</notextile>
 This table does not have constrains, so this seems to be one end of the chain. Further rummaging in the database tables reveals the other end of the chain. That is a table named @resource_events@.
+<notextile>
  <pre>
 <code>
-<notextile>
 mysql> show create table dashboard.resource_events\G
  CREATE TABLE `resource_events` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -136,9 +136,9 @@ mysql> show create table dashboard.resource_events\G
   CONSTRAINT `fk_resource_events_resource_status_id` FOREIGN KEY (`resource_status_id`) REFERENCES `resource_statuses` (`id`) ON DELETE CASCADE
  ) ENGINE=InnoDB AUTO_INCREMENT=116322 DEFAULT CHARSET=utf8
  1 row in set (0.00 sec)
-</notextile>
 </code>
 </pre>
+</notextile>
 So it seems I have myself a chain of tables connected by one to many relations. 
 
 @nodes@ <- @reports@ <- @resource_statuses@ <- @resource_events@ .
@@ -170,6 +170,7 @@ innodb_buffer_pool_size=256M
 </code>
 </pre>
 Then restart MySQL: 
+<notextile>
  <pre>
 <code>
  # service mysqld restart
@@ -177,6 +178,7 @@ Then restart MySQL:
  Starting mysqld:                                           [  OK  ]
 </code>
 </pre>
+</notextile>
 Now trying to delete a few months of reports:
  <pre>
 <code>

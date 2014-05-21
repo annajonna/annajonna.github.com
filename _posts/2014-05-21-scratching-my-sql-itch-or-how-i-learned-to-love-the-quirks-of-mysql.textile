@@ -45,9 +45,7 @@ This clearly shows the enormous size, and hence the problem of one of the tables
 <code>
 <notextile>
 mysql> show create table dashboard.resource_statuses\G
-*************************** 1. row ***************************
-       Table: resource_statuses
-Create Table: CREATE TABLE `resource_statuses` (
+ CREATE TABLE `resource_statuses` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `report_id` int(11) NOT NULL,
   `resource_type` varchar(255) DEFAULT NULL,
@@ -65,8 +63,8 @@ Create Table: CREATE TABLE `resource_statuses` (
   PRIMARY KEY (`id`),
   KEY `index_resource_statuses_on_report_id` (`report_id`),
   CONSTRAINT `fk_resource_statuses_report_id` FOREIGN KEY (`report_id`) REFERENCES `reports` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=52996727 DEFAULT CHARSET=utf8
-1 row in set (0.02 sec)
+ ) ENGINE=InnoDB AUTO_INCREMENT=52996727 DEFAULT CHARSET=utf8
+ 1 row in set (0.02 sec)
 </notextile>
 </code>
 </pre>
@@ -75,9 +73,7 @@ The table has a foreign key constraint connection to a table named reports. Taki
 <code>
 <notextile>
 mysql> show create table dashboard.reports\G
-*************************** 1. row ***************************
-       Table: reports
-Create Table: CREATE TABLE `reports` (
+ CREATE TABLE `reports` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `node_id` int(11) DEFAULT NULL,
   `host` varchar(255) DEFAULT NULL,
@@ -90,8 +86,8 @@ Create Table: CREATE TABLE `reports` (
   KEY `index_reports_on_node_id` (`node_id`),
   KEY `index_reports_on_time_and_node_id_and_status` (`time`,`node_id`,`status`),
   CONSTRAINT `fk_reports_node_id` FOREIGN KEY (`node_id`) REFERENCES `nodes` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=626677 DEFAULT CHARSET=utf8
-1 row in set (0.00 sec)
+ ) ENGINE=InnoDB AUTO_INCREMENT=626677 DEFAULT CHARSET=utf8
+ 1 row in set (0.00 sec)
 </notextile>
 </code>
 </pre>
@@ -100,9 +96,7 @@ This table has a foreign key constraint connection to a table named nodes. Takin
 <code>
 <notextile>
 mysql> show create table dashboard.nodes\G
-*************************** 1. row ***************************
-       Table: nodes
-Create Table: CREATE TABLE `nodes` (
+ CREATE TABLE `nodes` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) DEFAULT NULL,
   `description` text,
@@ -115,8 +109,8 @@ Create Table: CREATE TABLE `nodes` (
   `last_inspect_report_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uc_node_name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8
-1 row in set (0.00 sec)
+ ) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8
+ 1 row in set (0.00 sec)
 </notextile>
 </code>
 </pre>
@@ -125,9 +119,7 @@ This table does not have constrains, so this seems to be one end of the chain. F
 <code>
 <notextile>
 mysql> show create table dashboard.resource_events\G
-*************************** 1. row ***************************
-       Table: resource_events
-Create Table: CREATE TABLE `resource_events` (
+ CREATE TABLE `resource_events` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `resource_status_id` int(11) NOT NULL,
   `previous_value` text,
@@ -142,8 +134,8 @@ Create Table: CREATE TABLE `resource_events` (
   PRIMARY KEY (`id`),
   KEY `index_resource_events_on_resource_status_id` (`resource_status_id`),
   CONSTRAINT `fk_resource_events_resource_status_id` FOREIGN KEY (`resource_status_id`) REFERENCES `resource_statuses` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=116322 DEFAULT CHARSET=utf8
-1 row in set (0.00 sec)
+ ) ENGINE=InnoDB AUTO_INCREMENT=116322 DEFAULT CHARSET=utf8
+ 1 row in set (0.00 sec)
 </notextile>
 </code>
 </pre>
@@ -234,5 +226,5 @@ mysql> SELECT table_name,(data_length+index_length)/power(1024,2) tablesize_mb F
 </code>
 </pre>
 
-So this is fixed, and now I am off to a Cryptoparty held by the Pirate Party. ;) 
-
+So this is fixed, and now I am off to a Cryptoparty held by the Pirate Party. ;)
+ 

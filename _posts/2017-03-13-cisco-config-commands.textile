@@ -1,0 +1,21 @@
+---
+layout: post
+title: "Cisco config commands"
+description: ""
+category: "net"
+tags: [cisco]
+---
+{% include JB/setup %}
+
+h3. Some commands repeatedly used to configure my Cisco switches
+
+I hate to burden my long term memory with something so apoetic as commands for a Cisco switch. I mean, I love to remember lyrics (like Thick As A Brick), and sometimes parts of books, parts of language that I want to be part of, by knowing them by heart. 
+
+After logging in and in enable mode:
+@#configure terminal@ Ready for commands that edit the configuration
+@(config)#interface range GigabitEthernet0/1 - 48@ configure all 48 interface ports at once with the following commands
+@(config-if)#macro apply cisco-desktop $access_vlan 1017@ run this macro on the interface ports to set them for vlan nr. 1017. 
+@^Z@ This exits configure mode
+@#copy running<TAB> startup<TAB>@ making the changes permanent through restart. Uses autofill by the TAB key.
+
+Then just run reload . 
